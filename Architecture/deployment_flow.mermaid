@@ -1,0 +1,96 @@
+```mermaid
+flowchart LR
+    %% ─── Source ───────────────────────────────────────────
+    DEV[Developer Push\nGit Branch]
+    PR[Pull Request\n+ Eval Gate]
+
+    %% ─── CI Pipeline ──────────────────────────────────────
+    subgraph CI ["CI Pipeline (GitHub Actions)"]
+        LINT[Lint + Unit Tests]
+        EVAL[Model Eval Gate\nGolden Set + Hallucination Check]
+        SECURITY[Security Scan\nPrompt Injection + PII Tests]
+        BUILD[Docker Build\n& Tag]
+    end
+
+    %% ─── Registry ─────────────────────────────────────────
+    REG[(Container Registry\nGHCR / ECR)]
+
+    %% ─── Staging ──────────────────────────────────────────
+    subgraph STAGING ["Staging Environment"]
+        STAGE_DEPLOY[Staging Deploy\nDocker Compose]
+        SMOKE[Smoke Tests\nLatency + Response Quality]
+        LOAD[Load Test\n100 req/min for 5min]
+    end
+
+    %% ─── Promotion Gate ───────────────────────────────────
+    GATE{Promotion Gate\nAll checks green?}
+    HUMAN[Human Approval\nRequired]
+
+    %% ─── Production ───────────────────────────────────────
+    subgraph PROD ["Production Environment"]
+        direction TB
+        BLUE[Blue Deployment\nCurrent Active]
+        GREEN[Green Deployment\nNew Version]
+        LB[Load Balancer\nTraffic Split]
+    end
+
+    %% ─── Inference Targets ────────────────────────────────
+    subgraph INFERENCE ["Inference Targets"]
+        OLLAMA[Ollama\nQwen2.5-235B]
+        AZURE[Azure OpenAI\nGPT-4o]
+        BEDROCK[AWS Bedrock\nClaude / Titan]
+    end
+
+    %% ─── Observability ────────────────────────────────────
+    subgraph OBS ["Observability"]
+        TRACES[Inference Traces\nSQLite → Dashboard]
+        ALERTS[Alert Manager\nSlack + PagerDuty]
+        ROLLBACK[Rollback Trigger\nAuto if SLO breached]
+    end
+
+    %% ─── Connections ──────────────────────────────────────
+    DEV --> PR
+    PR --> LINT
+    LINT --> EVAL
+    EVAL --> SECURITY
+    SECURITY --> BUILD
+    BUILD --> REG
+
+    REG --> STAGE_DEPLOY
+    STAGE_DEPLOY --> SMOKE
+    SMOKE --> LOAD
+    LOAD --> GATE
+
+    GATE -- Pass --> HUMAN
+    GATE -- Fail --> PR
+
+    HUMAN -- Approve --> GREEN
+    HUMAN -- Reject --> PR
+
+    GREEN --> LB
+    LB -- 10% canary --> GREEN
+    LB -- 90% stable --> BLUE
+
+    GREEN --> OLLAMA
+    GREEN --> AZURE
+    GREEN --> BEDROCK
+
+    OLLAMA --> TRACES
+    AZURE --> TRACES
+    BEDROCK --> TRACES
+
+    TRACES --> ALERTS
+    ALERTS -- SLO breach --> ROLLBACK
+    ROLLBACK --> BLUE
+
+    %% ─── Styling ──────────────────────────────────────────
+    classDef pipeline fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+    classDef infra fill:#0f172a,stroke:#6366f1,color:#e2e8f0
+    classDef gate fill:#1e1b4b,stroke:#f59e0b,color:#fbbf24
+    classDef obs fill:#0f172a,stroke:#10b981,color:#e2e8f0
+
+    class LINT,EVAL,SECURITY,BUILD pipeline
+    class STAGE_DEPLOY,SMOKE,LOAD,BLUE,GREEN,LB infra
+    class GATE,HUMAN gate
+    class TRACES,ALERTS,ROLLBACK obs
+```

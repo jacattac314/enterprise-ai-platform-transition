@@ -1,0 +1,45 @@
+# Base image: vLLM inference target
+# Usage: docker build -f Dockerfile.vllm -t ai-inference-vllm:latest .
+# Designed for: Any HuggingFace-compatible model via vLLM serving engine
+# Requirements: NVIDIA GPU with CUDA 12.1+
+
+FROM vllm/vllm-openai:latest
+
+# ── Environment ──────────────────────────────────────────────────────────────
+ENV VLLM_HOST=0.0.0.0
+ENV VLLM_PORT=8000
+ENV HUGGING_FACE_HUB_TOKEN=""
+
+# Model config — override at runtime
+ENV MODEL_ID=Qwen/Qwen2.5-7B-Instruct
+ENV MAX_MODEL_LEN=32768
+ENV GPU_MEMORY_UTILIZATION=0.90
+ENV TENSOR_PARALLEL_SIZE=1
+ENV DTYPE=bfloat16
+
+# ── Install additional dependencies ──────────────────────────────────────────
+RUN pip install --no-cache-dir \
+    prometheus-client \
+    opentelemetry-sdk
+
+# ── Observability: expose Prometheus metrics ──────────────────────────────────
+ENV VLLM_PROMETHEUS_PORT=9090
+
+# ── Health check ─────────────────────────────────────────────────────────────
+HEALTHCHECK --interval=30s --timeout=15s --start-period=180s --retries=5 \
+    CMD curl -sf http://localhost:8000/health || exit 1
+
+EXPOSE 8000 9090
+
+# ── Launch vLLM OpenAI-compatible server ──────────────────────────────────────
+CMD ["sh", "-c", \
+    "python -m vllm.entrypoints.openai.api_server \
+    --model $MODEL_ID \
+    --host $VLLM_HOST \
+    --port $VLLM_PORT \
+    --max-model-len $MAX_MODEL_LEN \
+    --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
+    --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
+    --dtype $DTYPE \
+    --enable-metrics \
+    --served-model-name production-llm"]

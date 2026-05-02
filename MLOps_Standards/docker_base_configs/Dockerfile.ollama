@@ -1,0 +1,41 @@
+# Base image: Ollama inference target
+# Usage: docker build -f Dockerfile.ollama -t ai-inference-ollama:latest .
+# Designed for: Qwen2.5-235B-A22B (quantized) or any Ollama-compatible model
+
+FROM ollama/ollama:latest
+
+# ── Environment ──────────────────────────────────────────────────────────────
+ENV OLLAMA_HOST=0.0.0.0
+ENV OLLAMA_PORT=11434
+ENV OLLAMA_MODELS=/models
+ENV OLLAMA_MAX_LOADED_MODELS=1
+ENV OLLAMA_NUM_PARALLEL=4
+ENV OLLAMA_FLASH_ATTENTION=1
+
+# ── Model config (override at runtime via env) ────────────────────────────────
+ENV MODEL_NAME=qwen2.5:7b
+# For production: qwen2.5:235b-a22b-q4_K_M (requires sufficient VRAM)
+
+# ── Install dependencies ──────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Create model volume mount point ──────────────────────────────────────────
+RUN mkdir -p /models
+
+# ── Health check script ───────────────────────────────────────────────────────
+COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# ── Entrypoint: start Ollama, pull model if not cached, serve ─────────────────
+COPY scripts/entrypoint_ollama.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 11434
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -sf http://localhost:11434/api/tags || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

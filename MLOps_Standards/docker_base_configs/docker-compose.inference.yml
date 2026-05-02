@@ -1,0 +1,125 @@
+# docker-compose.inference.yml
+# Full local inference stack: Ollama + FastAPI gateway + observability
+# Usage: docker compose -f docker-compose.inference.yml up -d
+# Override model: MODEL_NAME=qwen2.5:7b docker compose up -d
+
+version: "3.9"
+
+services:
+
+  # ── LLM Inference Engine ────────────────────────────────────────────────────
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: ai-inference-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/models
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-qwen2.5:7b}
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_FLASH_ATTENTION=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ── FastAPI Orchestration Gateway ───────────────────────────────────────────
+  gateway:
+    build:
+      context: ../../
+      dockerfile: Dockerfile.gateway
+    container_name: ai-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MODEL_NAME=${MODEL_NAME:-qwen2.5:7b}
+      - REDIS_URL=redis://redis:6379
+      - SQLITE_PATH=/data/traces.db
+      - LOG_LEVEL=INFO
+      - ENABLE_RBAC=true
+      - ENABLE_PII_REDACTION=true
+    volumes:
+      - gateway_data:/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Redis: PII token mapping + session store ────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ai-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Prometheus: metrics collection ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+
+  # ── Grafana: dashboards ─────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
+  gateway_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: ai-inference-network
+    driver: bridge
