@@ -23,8 +23,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt pytest
+      - name: Install eval dependencies
+        # Install only what the eval harness needs — avoids pulling in spacy/GPU deps
+        run: pip install fastapi pydantic PyJWT redis pyyaml pytest
 
       - name: Run eval harness tests
         run: python -m pytest tests/evals/ -v --tb=short
