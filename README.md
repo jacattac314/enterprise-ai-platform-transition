@@ -50,7 +50,7 @@ This is not theoretical. Every framework, SOP, and architecture here is grounded
 - **Audience:** MLOps engineers, DevOps, infrastructure leads.
 
 ### Milestone 3: Probabilistic Evaluation
-- **Status:** `[ ] Planned`
+- **Status:** `[x] Complete`
 - **Deliverable:** [Hallucination & Latency Monitoring Framework](./PRDs/02_Probabilistic_Evaluation_Logic.md)
 - **Impact:** Replaces static roadmaps with data-driven performance metrics. Defines the eval harness that makes LLM outputs auditable and comparable over time.
 - **Audience:** ML engineers, QA leads, product managers.

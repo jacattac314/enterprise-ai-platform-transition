@@ -1,0 +1,24 @@
+latency_slos:
+  default:
+    ttft_p95_ms: 1200
+    total_p95_ms: 8000
+    tokens_per_second_min: 20
+    queue_wait_p99_ms: 500
+    security_overhead_p99_ms: 120
+  tool_call:
+    ttft_p95_ms: 800
+    total_p95_ms: 5000
+  rag_query:
+    ttft_p95_ms: 1500
+    total_p95_ms: 12000
+
+quality_slos:
+  hallucination_rate_max: 0.05       # >5% over 1-hour window → HIGH alert
+  self_consistency_min: 0.80         # <0.70 for 20+ consecutive → MEDIUM alert
+  grounding_score_min: 0.85          # drops >15% day-over-day → MEDIUM alert
+  judge_composite_min: 3.0           # out of 5.0
+
+regression_thresholds:
+  max_score_drop: 0.15               # 15% golden-set regression → gate fail
+  max_hallucination_increase: 0.15   # 15% increase → G3 alert
+  max_p95_multiplier: 1.50           # P95 > 150% of baseline → gate fail

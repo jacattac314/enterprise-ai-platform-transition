@@ -1,0 +1,95 @@
+name: Model Eval Gate
+
+on:
+  push:
+    paths:
+      - 'MLOps_Standards/model_registry.yml'
+      - 'evals/golden_set_full.jsonl'
+      - 'evals/eval_slo_config.yaml'
+  pull_request:
+    paths:
+      - 'MLOps_Standards/model_registry.yml'
+      - 'evals/golden_set_full.jsonl'
+
+jobs:
+  unit-tests:
+    name: Eval Harness Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install eval dependencies
+        # Install only what the eval harness needs — avoids pulling in spacy/GPU deps
+        run: pip install fastapi pydantic PyJWT redis pyyaml pytest
+
+      - name: Run eval harness tests
+        run: python -m pytest tests/evals/ -v --tb=short
+
+  threshold-check:
+    name: Hallucination & Latency Threshold Check
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    # Only runs when a live inference endpoint is configured
+    if: ${{ vars.INFERENCE_ENDPOINT != '' }}
+    env:
+      MODEL_ID: ${{ vars.MODEL_ID || 'qwen2.5:7b' }}
+      INFERENCE_ENDPOINT: ${{ vars.INFERENCE_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run smoke eval and collect traces
+        run: |
+          python evals/run_smoke_eval.py \
+            --n 10 \
+            --model "$MODEL_ID" \
+            --endpoint "$INFERENCE_ENDPOINT" \
+            --output smoke_eval_results.json
+
+      - name: Check hallucination threshold
+        run: |
+          python evals/check_thresholds.py \
+            --max-hallucination 0.05 \
+            --traces-db eval_traces.db
+
+      - name: Check latency regression
+        run: |
+          python evals/check_latency.py \
+            --p95-ttft-max 1200 \
+            --traces-db eval_traces.db
+
+      - name: Run eval gate
+        run: |
+          python evals/eval_gate.py \
+            --model "$MODEL_ID" \
+            --endpoint "$INFERENCE_ENDPOINT" \
+            --baseline-score 0.88 \
+            --threshold-drop 0.15 \
+            --output eval_gate_results.json
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            smoke_eval_results.json
+            eval_gate_results.json
+
+      - name: Fail on gate failure
+        if: failure()
+        run: |
+          echo "::error::Eval gate FAILED. Model promotion blocked."
+          exit 1
