@@ -39,6 +39,10 @@ This is not theoretical. Every framework, SOP, and architecture here is grounded
 - **Status:** `[x] Phase 2 Complete`
 - **Deliverables:** Append-only SQLite audit logger, LLM gateway (Anthropic SDK), output detokenizer, full pipeline integration in `/v1/prompt`, 17 cross-role integration tests.
 
+### Milestone 1.6: Governance & Security — Phase 3 (Validation)
+- **Status:** `[x] APPROVED`
+- **Deliverables:** Pen test suite (10 OWASP LLM01 injection vectors × 3 roles), load test (P99 ≤ 120 ms confirmed), red team suite (indirect injection, token smuggling, output scanner), compliance reporter (`src/security/compliance_reporter.py`) — all 6 PRD controls GREEN.
+
 ### Milestone 2: MLOps Infrastructure
 - **Status:** `[ ] Planned`
 - **Deliverable:** [Containerized Inference Workflow](./MLOps_Standards/docker_base_configs/) + [Model Rollback SOP](./MLOps_Standards/model_rollback_sop.md)

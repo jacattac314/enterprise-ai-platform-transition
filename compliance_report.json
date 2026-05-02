@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-05-02T02:42:14.073555+00:00",
+  "prd_version": "1.0",
+  "overall_status": "APPROVED",
+  "controls": [
+    {
+      "control_id": "G1",
+      "description": "Role-scoped prompt injection prevention \u2014 zero cross-role data leakage",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    },
+    {
+      "control_id": "G2",
+      "description": "PII redacted before reaching model context (recall \u2265 99%)",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    },
+    {
+      "control_id": "G3",
+      "description": "100% of completions logged with user + role + timestamp",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    },
+    {
+      "control_id": "G4",
+      "description": "Security layer P99 latency \u2264 120 ms",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    },
+    {
+      "control_id": "RT1",
+      "description": "PII exfiltration via indirect prompt injection blocked",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    },
+    {
+      "control_id": "RT2",
+      "description": "Token smuggling via retrieved content rejected",
+      "status": "PASS",
+      "evidence": "pytest tests/validation/ (exit=0)",
+      "detail": null
+    }
+  ],
+  "audit_record_count": 0,
+  "notes": [
+    "Audit DB not available; record count skipped."
+  ]
+}
