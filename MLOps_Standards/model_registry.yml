@@ -1,0 +1,66 @@
+# Model Version Registry
+# Machine-readable source of truth for all inference deployments.
+# Updated after every production deployment per model_rollback_sop.md §Step 4.
+# Format: one entry per deployed version, newest first.
+
+registry:
+
+  - model_family: qwen2.5
+    variant: 7b
+    version_tag: v1.2.3
+    image: ai-inference-ollama:v1.2.3
+    ollama_tag: qwen2.5:7b
+    hf_model_id: Qwen/Qwen2.5-7B-Instruct
+    status: stable          # stable | canary | deprecated | rollback-target
+    eval_score: 0.91
+    p95_latency_ms: 420
+    deployed_at: "2025-04-15"
+    deployed_by: platform-team
+    notes: "Current stable. Promoted from canary after 48h soak."
+
+  - model_family: qwen2.5
+    variant: 7b
+    version_tag: v1.1.0
+    image: ai-inference-ollama:v1.1.0
+    ollama_tag: qwen2.5:7b
+    hf_model_id: Qwen/Qwen2.5-7B-Instruct
+    status: rollback-target
+    eval_score: 0.88
+    p95_latency_ms: 390
+    deployed_at: "2025-03-10"
+    deployed_by: platform-team
+    notes: "Designated rollback target. Do not purge."
+
+  - model_family: gpt-4o
+    variant: null
+    version_tag: "2025-04-01"
+    image: null              # Azure-hosted; no container image
+    ollama_tag: null
+    hf_model_id: null
+    status: stable
+    eval_score: 0.94
+    p95_latency_ms: 680
+    deployed_at: "2025-04-01"
+    deployed_by: platform-team
+    notes: "Azure OpenAI gateway target. Managed by Microsoft."
+
+  - model_family: qwen2.5
+    variant: 235b-a22b
+    version_tag: q4_K_M
+    image: ai-inference-ollama:235b-q4_K_M
+    ollama_tag: qwen2.5:235b-a22b-q4_K_M
+    hf_model_id: Qwen/Qwen2.5-235B-A22B
+    status: canary
+    eval_score: 0.96
+    p95_latency_ms: 1100
+    deployed_at: "2025-05-01"
+    deployed_by: platform-team
+    notes: "Large-parameter production candidate. Canary at 5% traffic. Requires A100."
+
+# ---------------------------------------------------------------------------
+# Eval gate thresholds (referenced by evals/eval_gate.py defaults)
+# ---------------------------------------------------------------------------
+gate_thresholds:
+  max_score_drop: 0.15       # 15% regression from baseline triggers gate fail
+  min_category_score: 0.70   # No single task category below 70%
+  max_p95_multiplier: 1.50   # P95 must not exceed 150% of baseline

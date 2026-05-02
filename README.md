@@ -40,7 +40,7 @@ This is not theoretical. Every framework, SOP, and architecture here is grounded
 - **Deliverables:** Append-only SQLite audit logger, LLM gateway (Anthropic SDK), output detokenizer, full pipeline integration in `/v1/prompt`, 17 cross-role integration tests.
 
 ### Milestone 2: MLOps Infrastructure
-- **Status:** `[ ] Planned`
+- **Status:** `[x] Complete`
 - **Deliverable:** [Containerized Inference Workflow](./MLOps_Standards/docker_base_configs/) + [Model Rollback SOP](./MLOps_Standards/model_rollback_sop.md)
 - **Impact:** Scalable, repeatable deployment of high-parameter models. Zero-downtime rollback. Portable across Ollama, vLLM, and Bedrock targets.
 - **Audience:** MLOps engineers, DevOps, infrastructure leads.

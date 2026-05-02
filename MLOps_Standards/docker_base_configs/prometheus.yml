@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: production
+    platform: ai-inference
+
+scrape_configs:
+
+  # FastAPI security gateway — custom /metrics endpoint
+  - job_name: ai_gateway
+    static_configs:
+      - targets: ['gateway:8080']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # vLLM OpenAI server — built-in Prometheus exporter
+  - job_name: vllm_inference
+    static_configs:
+      - targets: ['vllm:9090']
+    scrape_interval: 15s
+
+  # Ollama — no native Prometheus; scraped via gateway sidecar
+  - job_name: ollama_inference
+    static_configs:
+      - targets: ['ollama:11434']
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+
+  # Redis — redis_exporter sidecar
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
