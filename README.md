@@ -44,7 +44,7 @@ This is not theoretical. Every framework, SOP, and architecture here is grounded
 - **Deliverables:** Pen test suite (10 OWASP LLM01 injection vectors × 3 roles), load test (P99 ≤ 120 ms confirmed), red team suite (indirect injection, token smuggling, output scanner), compliance reporter (`src/security/compliance_reporter.py`) — all 6 PRD controls GREEN.
 
 ### Milestone 2: MLOps Infrastructure
-- **Status:** `[ ] Planned`
+- **Status:** `[x] Complete`
 - **Deliverable:** [Containerized Inference Workflow](./MLOps_Standards/docker_base_configs/) + [Model Rollback SOP](./MLOps_Standards/model_rollback_sop.md)
 - **Impact:** Scalable, repeatable deployment of high-parameter models. Zero-downtime rollback. Portable across Ollama, vLLM, and Bedrock targets.
 - **Audience:** MLOps engineers, DevOps, infrastructure leads.

@@ -1,0 +1,39 @@
+# FastAPI LLM Security Gateway
+# Usage: docker build -f Dockerfile.gateway -t ai-gateway:latest .
+# Runs the Phase 1-3 security pipeline: PII redaction, JWT RBAC,
+# role-scoped system prompts, audit logging, output detokenization.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# ── System deps ──────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python deps ──────────────────────────────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Application source ───────────────────────────────────────────────────────
+COPY src/ ./src/
+
+# ── Non-root user ────────────────────────────────────────────────────────────
+RUN useradd -m -u 1000 gateway
+RUN mkdir -p /data && chown gateway:gateway /data
+USER gateway
+
+# ── Runtime config (override via env or docker-compose) ─────────────────────
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
+ENV AUDIT_LOG_DB=/data/audit_log.db
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", \
+     "--workers", "2", "--log-level", "info"]
